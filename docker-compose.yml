@@ -31,6 +31,7 @@ services:
       PS_FOLDER_INSTALL: install-dev
       PS_LANGUAGE: en
       PS_COUNTRY: fr
+      PS_DEV_MODE: 1
     depends_on:
       - mysql
     ports:
