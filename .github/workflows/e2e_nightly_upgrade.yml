@@ -117,7 +117,7 @@ jobs:
         name: Upload failed screenshots
         if: ${{ always() }}
         with:
-          name: failed-steps-for-test-${{ matrix.ps_start_version }}-${{ matrix.ps_target_version.for_test }}
+          name: failed-steps-screnshots-upgrade-${{ matrix.ps_start_version }}-${{ matrix.ps_target_version.for_test }}
           path: ./tests/e2e/screenshots/
 
       - name: Rename Upgrade reports
@@ -139,7 +139,6 @@ jobs:
         working-directory: ./prestashop_git/tests/UI
 
       - name: Run Sanity tests
-        id: sanity-test
         if: steps.upgrade-test.outcome == 'success'
         run: |
           rm -rf ./campaigns/sanity/01_installShop
@@ -147,6 +146,15 @@ jobs:
         working-directory: ./prestashop_git/tests/UI
         env:
           URL_FO: "http://localhost:8001/"
+          TAKE_SCREENSHOT_AFTER_FAIL: true
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v2
+        name: Upload failed screenshots
+        if: ${{ always() }}
+        with:
+          name: failed-steps-screnshots-sanity-${{ matrix.ps_start_version }}-${{ matrix.ps_target_version.for_test }}
+          path: ./prestashop_git/tests/UI/screenshots/
 
       - name: Rename Sanity reports
         if: steps.upgrade-test.outcome == 'success'
