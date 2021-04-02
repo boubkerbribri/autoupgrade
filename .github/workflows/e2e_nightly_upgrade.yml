@@ -126,7 +126,7 @@ jobs:
 
       # Run Sanity tests after the upgrade
       - uses: actions/checkout@v2
-        if: steps.upgrade-test.outcome === 'success'
+        if: steps.upgrade-test.outcome == 'success'
         name: Checkout PrestaShop/PrestaShop repository
         with:
           repository: 'PrestaShop/PrestaShop'
@@ -134,13 +134,13 @@ jobs:
           path: prestashop_git
 
       - name: Install dependencies
-        if: steps.upgrade-test.outcome === 'success'
+        if: steps.upgrade-test.outcome == 'success'
         run: npm install
         working-directory: ./prestashop_git/tests/UI
 
       - name: Run Sanity tests
         id: sanity-test
-        if: steps.upgrade-test.outcome === 'success'
+        if: steps.upgrade-test.outcome == 'success'
         run: |
           rm -rf ./campaigns/sanity/01_installShop
           npm run sanity-tests
@@ -149,7 +149,7 @@ jobs:
           URL_FO: "http://localhost:8001/"
 
       - name: Rename Sanity reports
-        if: steps.upgrade-test.outcome === 'success'
+        if: steps.upgrade-test.outcome == 'success'
         run: cp ./tests/UI/mochawesome-report/mochawesome.json ${{ env.reports_path }}/sanity.json
 
       # Upload Mochawesome reports
