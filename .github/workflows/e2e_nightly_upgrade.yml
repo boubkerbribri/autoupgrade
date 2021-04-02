@@ -1,6 +1,7 @@
 name: Nightly upgrades with user inferfaces
 
 on:
+  push:
   schedule:
     - cron: "0 6 * * *" # Every day at 06:00Am
 
@@ -103,6 +104,7 @@ jobs:
 
       # Run Upgrade tests
       - name: Run tests
+        id: upgrade-test
         run: npm run upgrade-test
         working-directory: ./tests/e2e
         env:
@@ -118,16 +120,44 @@ jobs:
           name: failed-steps-for-test-${{ matrix.ps_start_version }}-${{ matrix.ps_target_version.for_test }}
           path: ./tests/e2e/screenshots/
 
-      # Upload Mochawesome reports
-      - name: Rename Mochawesome report
+      - name: Rename Upgrade reports
         if: ${{ always() }}
-        run: ./tests/e2e/scripts/copy_reports.sh ${{ env.reports_path }} ${{ matrix.ps_start_version  }} ${{ matrix.ps_target_version.branch }}
+        run: ./tests/e2e/scripts/copy_reports.sh ${{ env.reports_path }} ${{ matrix.ps_start_version }} ${{ matrix.ps_target_version.branch }}
 
+      # Run Sanity tests after the upgrade
+      - uses: actions/checkout@v2
+        if: ${{ step.upgrade-test.outcome === 'success' }}
+        name: Checkout PrestaShop/PrestaShop repository
+        with:
+          repository: 'PrestaShop/PrestaShop'
+          ref: {{ matrix.ps_target_version.branch }}
+          path: prestashop_git
+
+      - name: Install dependencies
+        if: ${{ step.upgrade-test.outcome === 'success' }}
+        run: npm install
+        working-directory: ./prestashop_git/tests/UI
+
+      - name: Run Sanity tests
+        id: sanity-test
+        if: ${{ step.upgrade-test.outcome === 'success' }}
+        run: |
+          rm -rf ./campaigns/sanity/01_installShop
+          npm run sanity-tests
+        working-directory: ./prestashop_git/tests/UI
+        env:
+          URL_FO: "http://localhost:8001/"
+
+      - name: Rename Sanity reports
+        if: ${{ step.upgrade-test.outcome === 'success' }}
+        run: cp ./tests/UI/mochawesome-report/mochawesome.json ${{ env.reports_path }}/sanity.json
+
+      # Upload Mochawesome reports
       - uses: actions/upload-artifact@v2
         name: Upload Mochawesome report
         if: ${{ always() }}
         with:
-          name: tests-reports-${{ matrix.ps_target_version.branch }}
+          name: tests-reports-${{ matrix.ps_start_version }}-${{ matrix.ps_target_version.for_test }}
           path: ${{ env.reports_path }}
 
   # Second job: merge reports (depends on upgrade job)
@@ -140,6 +170,8 @@ jobs:
 
     strategy:
       matrix:
+        ps_start_version: [ '1.7.4.4', '1.7.5.2', '1.7.6.9', '1.7.7.1' ]
+
         ps_target_version: ${{ fromJson(needs.get_ps_target_versions.outputs.target_versions) }}
 
       fail-fast: false
@@ -150,7 +182,7 @@ jobs:
       - uses: actions/download-artifact@v2
         name: Download reports
         with:
-          name: tests-reports-${{ matrix.ps_target_version.branch }}
+          name: tests-reports-${{ matrix.ps_start_version }}-${{ matrix.ps_target_version.for_test }}
           path: ${{ env.reports_path }}
 
       - name: Setup Python
@@ -165,7 +197,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         name: Upload combined report
         with:
-          name: combined-report-${{ matrix.ps_target_version.branch }}
+          name: combined-report-${{ matrix.ps_start_version }}-${{ matrix.ps_target_version.for_test }}
           path: ${{ env.reports_path }}/${{ env.combined_report_name }}
 
   # Third job: Upload report on GCP (Depends on merge-reports job)
@@ -178,6 +210,8 @@ jobs:
 
     strategy:
       matrix:
+        ps_start_version: [ '1.7.4.4', '1.7.5.2', '1.7.6.9', '1.7.7.1' ]
+
         ps_target_version: ${{ fromJson(needs.get_ps_target_versions.outputs.target_versions) }}
 
       fail-fast: false
@@ -188,7 +222,7 @@ jobs:
       - uses: actions/download-artifact@v2
         name: Download report
         with:
-          name: combined-report-${{ matrix.ps_target_version.branch }}
+          name: combined-report-${{ matrix.ps_start_version }}-${{ matrix.ps_target_version.for_test }}
           path: ${{ env.reports_path }}
 
       - uses: google-github-actions/setup-gcloud@master
