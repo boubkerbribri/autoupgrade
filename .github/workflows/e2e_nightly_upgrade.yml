@@ -78,7 +78,6 @@ jobs:
         shell: bash
         run : |
           ./tests/e2e/scripts/docker_build.sh
-          ls temp-ps
 
       # Install Module with user interface
       - name: Setup Node
@@ -117,16 +116,16 @@ jobs:
       - name: Rename logs
         if: ${{ always() }}
         run: |
-          mkdir logs
-          cp temp-ps/admin-dev/autoupgrade/tmp/log.txt ./logs/log.txt
-          ls ./logs
+          mkdir /my-logs
+          sudo docker cp prestashop_autoupgrade:/var/www/html/admin-dev/autoupgrade/tmp/ /my-logs
+          ls /my-logs
 
       - uses: actions/upload-artifact@v2
         name: upload log
         if: ${{ always() }}
         with:
           name: log-${{ matrix.ps_start_version }}-${{ matrix.ps_target_version.for_test }}
-          path: ./logs
+          path: /my-logs
 
       - uses: actions/upload-artifact@v2
         name: Upload failed screenshots
