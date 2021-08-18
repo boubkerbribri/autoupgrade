@@ -77,8 +77,8 @@ jobs:
           VERSION: ${{ matrix.ps_start_version }}
         shell: bash
         run : |
-          ls temp-ps
           ./tests/e2e/scripts/docker_build.sh
+          ls temp-ps
 
       # Install Module with user interface
       - name: Setup Node
